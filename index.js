@@ -81,27 +81,58 @@ const start = async () => {
   try {
     // await connectDB(process.env.MONGO_URI);
 
+    // const config = {
+    //   user: process.env.SQL_USER,
+    //   password: process.env.SQL_PASSWORD,
+    //   server: process.env.SQL_SERVER,
+    //   port: 1433,
+    //   database: process.env.SQL_DATABASE,
+    //   pool: {
+    //     max: 10,
+    //     min: 0,
+    //     idleTimeoutMillis: 30000,
+    //   },
+    //   options: {
+    //     encrypt: true, // if you are using Azure
+    //     trustServerCertificate: false,
+    //   },
+    //   ssl: {
+    //     rejectUnauthorized: false,
+    //   },
+    // };
     const config = {
-      user: process.env.SQL_USER,
-      password: process.env.SQL_PASSWORD,
-      server: process.env.SQL_SERVER,
-      port: 1433,
-      database: process.env.SQL_DATABASE,
-      pool: {
-        max: 10,
-        min: 0,
-        idleTimeoutMillis: 30000,
-      },
+      port: parseInt(process.env.DB_PORT, 10),
+      server: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASS,
+      database: process.env.DB_Database,
+      stream: false,
       options: {
-        encrypt: true, // if you are using Azure
-        trustServerCertificate: false,
+        trustedConnection: true,
+        encrypt: true,
+        enableArithAbort: true,
+        trustServerCertificate: true,
       },
     };
 
-    await sql.connect(config);
-    const result =
-      await sql.query`select * from datawayfinder where id = ${value}`;
-    console.dir(result);
+    sql.connect(config).then((pool) => {
+      if (pool.connecting) {
+        console.log("Connecting to the database...");
+      }
+      if (pool.connected) {
+        console.log("Connected to SQL Server");
+        //get count of table
+        const request = new sql.Request();
+        request.query("SELECT COUNT(*) FROM datawayfinder", (err, result) => {
+          if (err) {
+            console.log(err);
+          } else {
+            console.log(result.recordset);
+            console.log(result.recordset[0][""]);
+          }
+        });
+      }
+    });
     app.listen(port, () =>
       console.log(`Server is listening at http://localhost:${port} ...`)
     );
