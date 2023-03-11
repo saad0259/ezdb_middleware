@@ -1,11 +1,14 @@
 {
   "name": "mega-middleware",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "middleware for mega app created for peter",
   "main": "index.js",
   "engines": {
     "node": "16.x",
     "npm": "8.15.0"
+  },
+  "config": {
+    "environment": "dev"
   },
   "scripts": {
     "start": "nodemon index.js",

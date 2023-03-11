@@ -1,5 +1,7 @@
 require("dotenv").config();
 require("express-async-errors");
+const packageJson = require("./package.json");
+const version = packageJson.version;
 //extra security
 const helmet = require("helmet");
 const cors = require("cors");
@@ -46,7 +48,9 @@ app.use(cors());
 app.use(xss());
 
 app.get("/", (req, res) => {
-  res.send("<h1>Mega App API</h1>");
+  res.send(
+    `<h1>Mega App API (${version}-${packageJson.config.environment})</h1>`
+  );
 });
 
 // app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
