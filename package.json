@@ -3,9 +3,13 @@
   "version": "1.0.0",
   "description": "middleware for mega app created for peter",
   "main": "index.js",
+  "engines": {
+    "node": "16.x",
+    "npm": "8.15.0"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon index.js"
+    "start": "nodemon index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
