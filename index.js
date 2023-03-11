@@ -5,6 +5,23 @@ const helmet = require("helmet");
 const cors = require("cors");
 const xss = require("xss-clean");
 const rateLimiter = require("express-rate-limit");
+const sql = require("mssql");
+const dbConfig = {
+  port: parseInt(process.env.DB_PORT, 10),
+  server: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_DATABASE,
+  stream: false,
+  options: {
+    trustedConnection: true,
+    encrypt: true,
+    enableArithAbort: true,
+    trustServerCertificate: true,
+    timeout: 30000,
+  },
+};
+const appPool = new sql.ConnectionPool(dbConfig);
 
 //Swagger
 // var path = require("path");
@@ -17,7 +34,6 @@ const express = require("express");
 const app = express();
 
 //sql
-const sql = require("mssql");
 
 //Firebase
 // const admin = require("firebase-admin");
@@ -42,7 +58,7 @@ const sql = require("mssql");
 
 // const connectDB = require("./db/connect");
 
-// const cardsRouter = require("./routes/cards");
+const usersRouter = require("./routes/users");
 
 const notFoundMiddleware = require("./middleware/not-found");
 const errorHandlerMiddleware = require("./middleware/error-handler");
@@ -70,7 +86,7 @@ app.get("/", (req, res) => {
 
 // app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-// app.use("/api/v1/cards", cardsRouter);
+app.use("/api/v1/users", usersRouter);
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
@@ -79,63 +95,50 @@ const port = process.env.PORT || 5000;
 
 const start = async () => {
   try {
-    // await connectDB(process.env.MONGO_URI);
-
     // const config = {
-    //   user: process.env.SQL_USER,
-    //   password: process.env.SQL_PASSWORD,
-    //   server: process.env.SQL_SERVER,
-    //   port: 1433,
-    //   database: process.env.SQL_DATABASE,
-    //   pool: {
-    //     max: 10,
-    //     min: 0,
-    //     idleTimeoutMillis: 30000,
-    //   },
+    //   port: parseInt(process.env.DB_PORT, 10),
+    //   server: process.env.DB_HOST,
+    //   user: process.env.DB_USER,
+    //   password: process.env.DB_PASS,
+    //   database: process.env.DB_DATABASE,
+    //   stream: false,
     //   options: {
-    //     encrypt: true, // if you are using Azure
-    //     trustServerCertificate: false,
-    //   },
-    //   ssl: {
-    //     rejectUnauthorized: false,
+    //     trustedConnection: true,
+    //     encrypt: true,
+    //     enableArithAbort: true,
+    //     trustServerCertificate: true,
     //   },
     // };
-    const config = {
-      port: parseInt(process.env.DB_PORT, 10),
-      server: process.env.DB_HOST,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASS,
-      database: process.env.DB_Database,
-      stream: false,
-      options: {
-        trustedConnection: true,
-        encrypt: true,
-        enableArithAbort: true,
-        trustServerCertificate: true,
-      },
-    };
 
-    sql.connect(config).then((pool) => {
-      if (pool.connecting) {
-        console.log("Connecting to the database...");
-      }
-      if (pool.connected) {
-        console.log("Connected to SQL Server");
-        //get count of table
-        const request = new sql.Request();
-        request.query("SELECT COUNT(*) FROM datawayfinder", (err, result) => {
-          if (err) {
-            console.log(err);
-          } else {
-            console.log(result.recordset);
-            console.log(result.recordset[0][""]);
-          }
-        });
-      }
-    });
-    app.listen(port, () =>
-      console.log(`Server is listening at http://localhost:${port} ...`)
-    );
+    // sql.connect(config).then((pool) => {
+    //   if (pool.connecting) {
+    //     console.log("Connecting to the database...");
+    //   }
+    //   if (pool.connected) {
+    //     console.log("Connected to SQL Server");
+    //     //get count of table
+    //     const request = new sql.Request();
+    //     request.query("SELECT COUNT(*) FROM datawayfinder", (err, result) => {
+    //       if (err) {
+    //         console.log(err);
+    //       } else {
+    //         console.log(result.recordset);
+    //         console.log(result.recordset[0][""]);
+    //       }
+    //     });
+    //   }
+    // });
+    appPool
+      .connect()
+      .then(function (pool) {
+        app.locals.db = pool;
+        app.listen(port, () =>
+          console.log(`Server is listening at http://localhost:${port} ...`)
+        );
+      })
+      .catch(function (err) {
+        console.error("Error creating connection pool", err);
+      });
   } catch (error) {
     console.log(error);
   }
