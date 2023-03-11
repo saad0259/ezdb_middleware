@@ -9,44 +9,37 @@ const getUsers = async (req, res) => {
     console.log(req.query);
     const { searchType, searchValue, limit = 50 } = req.query;
     _validateSearch(searchType, searchValue);
-
-    switch (searchType) {
-      case "name":
-        req.app.locals.db.query(
-          `SELECT TOP ${limit} * FROM ${usersTable} WHERE name LIKE '%${searchValue}%'`,
-          _handelQueryResponse(res)
-        );
-        break;
-      case "address":
-        req.app.locals.db.query(
-          `SELECT TOP ${limit} * FROM ${usersTable} WHERE address LIKE '%${searchValue}%'`,
-          _handelQueryResponse(res)
-        );
-
-        break;
-
-      case "phone":
-        req.app.locals.db.query(
-          `SELECT TOP ${limit} * FROM ${usersTable} WHERE tel1 LIKE '%${searchValue}%' OR tel2 LIKE '%${searchValue}%' OR tel3 LIKE '%${searchValue}%'`,
-          _handelQueryResponse(res)
-        );
-        break;
-
-      case "ic":
-        req.app.locals.db.query(
-          `SELECT TOP ${limit} * FROM ${usersTable} WHERE ic LIKE '%${searchValue}%'`,
-          _handelQueryResponse(res)
-        );
-        break;
-
-      default:
-        throw new BadRequestError("Invalid search type");
-    }
+    let query = "";
+    query = _getQuery(searchType, query, limit, searchValue);
+    req.app.locals.db.query(query, _handelQueryResponse(res));
   } catch (error) {
     console.error("Error executing query", error);
     throw new BadRequestError("Something went wrong: " + error);
   }
 };
+
+function _getQuery(searchType, query, limit, searchValue) {
+  switch (searchType) {
+    case "name":
+      query = `SELECT TOP ${limit} * FROM ${usersTable} WHERE name LIKE '%${searchValue}%'`;
+      break;
+    case "address":
+      query = `SELECT TOP ${limit} * FROM ${usersTable} WHERE address LIKE '%${searchValue}%'`;
+      break;
+
+    case "phone":
+      query = `SELECT TOP ${limit} * FROM ${usersTable} WHERE tel1 LIKE '%${searchValue}%' OR tel2 LIKE '%${searchValue}%' OR tel3 LIKE '%${searchValue}%'`;
+      break;
+
+    case "ic":
+      query = `SELECT TOP ${limit} * FROM ${usersTable} WHERE ic LIKE '%${searchValue}%'`;
+      break;
+
+    default:
+      throw new BadRequestError("Invalid search type");
+  }
+  return query;
+}
 
 function _validateSearch(searchType, searchValue) {
   if (!searchType || !searchValue) {
