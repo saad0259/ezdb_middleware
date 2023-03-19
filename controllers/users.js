@@ -1,17 +1,24 @@
 const { StatusCodes } = require("http-status-codes");
 const { BadRequestError } = require("../errors");
 const InternalServerError = require("../errors/server-error");
+const sql = require("mssql");
+
+const pool = require("../db/connection");
 
 const usersTable = "datawayfinder";
 
 const getUsers = async (req, res) => {
   try {
+    const poolResult = await pool;
+    const request = poolResult.request();
     console.log(req.query);
     const { searchType, searchValue, limit = 50 } = req.query;
     _validateSearch(searchType, searchValue);
     let queryStatement = "";
     queryStatement = _getQuery(searchType, limit, searchValue);
-    req.app.locals.db.query(queryStatement, _handelQueryResponse(res));
+
+    const result = await request.query(queryStatement);
+    res.status(StatusCodes.OK).json(result.recordset);
   } catch (error) {
     console.error("Error executing query", error);
     throw new BadRequestError("Something went wrong: " + error);
@@ -48,7 +55,27 @@ function _validateSearch(searchType, searchValue) {
   }
 }
 
-module.exports = { getUsers };
+const createUser = async (req, res) => {
+  const { role, email, password } = req.body;
+  const admin = req.admin;
+  if (!role || !email || !password) {
+    throw new BadRequestError("Please provide all required fields");
+  } else {
+    console.log("Creating user");
+    const userRecord = await admin.auth().createUser({
+      email: email,
+      password: password,
+    });
+    console.log("Created user", userRecord);
+
+    await admin.auth().setCustomUserClaims(userRecord.uid, { role: role });
+    console.log("Set custom claims");
+
+    res.status(StatusCodes.CREATED).json(userRecord);
+  }
+};
+
+module.exports = { getUsers, createUser };
 function _handelQueryResponse(res) {
   return function (err, recordset) {
     if (err) {
