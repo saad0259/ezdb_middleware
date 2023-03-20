@@ -13,7 +13,7 @@ const getUsers = async (req, res) => {
   try {
     const poolResult = await pool;
     const request = poolResult.request();
-    const { searchType, searchValue, limit = 50, userId } = req.query;
+    const { searchType, searchValue, limit = 20, userId } = req.query;
     _validateSearch(searchType, searchValue, userId);
     let queryStatement = "";
     queryStatement = _getQuery(searchType, limit, searchValue);
