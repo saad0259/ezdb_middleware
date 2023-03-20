@@ -53,7 +53,7 @@ function _getQuery(searchType, limit, searchValue) {
       queryStatement = `SELECT TOP ${limit} * FROM ${usersTable} WHERE name LIKE '%${searchValue}%'`;
       break;
     case "address":
-      queryStatement = `SELECT TOP ${limit} * FROM ${usersTable} WHERE address LIKE '%${searchValue}%'`;
+      queryStatement = `SELECT TOP ${limit} * FROM ${usersTable} WHERE address LIKE '%${searchValue}%' OR postcode LIKE '%${searchValue}%'`;
       break;
 
     case "phone":
