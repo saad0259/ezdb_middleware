@@ -6,24 +6,45 @@ const sql = require("mssql");
 const pool = require("../db/connection");
 
 const usersTable = "datawayfinder";
+const usersCollection = "users";
+const usersSearchCollection = "userSearch";
 
 const getUsers = async (req, res) => {
   try {
     const poolResult = await pool;
     const request = poolResult.request();
-    console.log(req.query);
-    const { searchType, searchValue, limit = 50 } = req.query;
-    _validateSearch(searchType, searchValue);
+    const { searchType, searchValue, limit = 50, userId } = req.query;
+    _validateSearch(searchType, searchValue, userId);
     let queryStatement = "";
     queryStatement = _getQuery(searchType, limit, searchValue);
-
     const result = await request.query(queryStatement);
+
+    addSearchRecordToFirebase(searchType, searchValue, limit, userId, req);
     res.status(StatusCodes.OK).json(result.recordset);
   } catch (error) {
     console.error("Error executing query", error);
     throw new BadRequestError("Something went wrong: " + error);
   }
 };
+
+async function addSearchRecordToFirebase(
+  searchType,
+  searchValue,
+  limit,
+  userId,
+  req
+) {
+  const searchDoc = {
+    searchType: searchType,
+    searchValue: searchValue,
+    limit: limit,
+    userId: userId,
+    createdAt: req.admin.firestore.Timestamp.now(),
+  };
+  const userRef = req.db.collection(usersCollection).doc(userId);
+
+  await userRef.collection(usersSearchCollection).add(searchDoc);
+}
 
 function _getQuery(searchType, limit, searchValue) {
   let queryStatement = "";
@@ -49,9 +70,9 @@ function _getQuery(searchType, limit, searchValue) {
   return queryStatement;
 }
 
-function _validateSearch(searchType, searchValue) {
-  if (!searchType || !searchValue) {
-    throw new BadRequestError("Invalid search type");
+function _validateSearch(searchType, searchValue, userId) {
+  if (!searchType || !searchValue || !userId) {
+    throw new BadRequestError("Invalid Request Parameters");
   }
 }
 
@@ -61,27 +82,15 @@ const createUser = async (req, res) => {
   if (!role || !email || !password) {
     throw new BadRequestError("Please provide all required fields");
   } else {
-    console.log("Creating user");
     const userRecord = await admin.auth().createUser({
       email: email,
       password: password,
     });
-    console.log("Created user", userRecord);
 
     await admin.auth().setCustomUserClaims(userRecord.uid, { role: role });
-    console.log("Set custom claims");
 
     res.status(StatusCodes.CREATED).json(userRecord);
   }
 };
 
 module.exports = { getUsers, createUser };
-function _handelQueryResponse(res) {
-  return function (err, recordset) {
-    if (err) {
-      console.error(err);
-      throw new InternalServerError("SERVER ERROR");
-    }
-    res.status(StatusCodes.OK).json(recordset.recordset);
-  };
-}
