@@ -13,6 +13,7 @@ const config = {
     trustServerCertificate: true,
     timeout: 60000,
     enableArithAbort: true,
+    connectionTimeout: 60000,
   },
   pool: {
     max: 10,
