@@ -6,17 +6,18 @@ const config = {
   user: process.env.DB_USER,
   password: process.env.DB_PASS,
   database: process.env.DB_DATABASE,
+  requestTimeout: 60000,
   options: {
     encrypt: true,
     trustedConnection: true,
     trustServerCertificate: true,
-    timeout: 30000,
+    timeout: 60000,
     enableArithAbort: true,
   },
   pool: {
     max: 10,
     min: 0,
-    idleTimeoutMillis: 30000,
+    idleTimeoutMillis: 60000,
   },
 };
 
