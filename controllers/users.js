@@ -17,8 +17,10 @@ const getUsers = async (req, res) => {
     const request = poolResult.request();
     const { searchType, searchValue, limit = 10, userId } = req.query;
     _validateSearch(searchType, searchValue, userId);
+    console.log("search validated");
     let queryStatement = "";
     queryStatement = _getQuery(searchType, limit, searchValue);
+    console.log("query statement", queryStatement);
     const result = await request.query(queryStatement);
 
     console.log(
@@ -26,6 +28,7 @@ const getUsers = async (req, res) => {
     );
 
     addSearchRecordToFirebase(searchType, searchValue, limit, userId, req);
+    console.log("added to firebase");
     res.status(StatusCodes.OK).json(result.recordset);
   } catch (error) {
     console.error("Error executing query", error);
