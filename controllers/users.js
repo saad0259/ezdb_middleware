@@ -1,6 +1,5 @@
 const { StatusCodes } = require("http-status-codes");
 const { BadRequestError } = require("../errors");
-const InternalServerError = require("../errors/server-error");
 const sql = require("mssql");
 
 const pool = require("../db/connection");
@@ -11,13 +10,20 @@ const usersSearchCollection = "userSearch";
 
 const getUsers = async (req, res) => {
   try {
+    const start = new Date().getTime();
     const poolResult = await pool;
+    console.log(`Got pool in:  ${(new Date().getTime() - start) / 1000} sec `);
+
     const request = poolResult.request();
     const { searchType, searchValue, limit = 10, userId } = req.query;
     _validateSearch(searchType, searchValue, userId);
     let queryStatement = "";
     queryStatement = _getQuery(searchType, limit, searchValue);
     const result = await request.query(queryStatement);
+
+    console.log(
+      `Got result in:  ${(new Date().getTime() - start) / 1000} sec `
+    );
 
     addSearchRecordToFirebase(searchType, searchValue, limit, userId, req);
     res.status(StatusCodes.OK).json(result.recordset);
