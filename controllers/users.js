@@ -15,11 +15,11 @@ const getUsers = async (req, res) => {
     console.log(`Got pool in:  ${(new Date().getTime() - start) / 1000} sec `);
 
     const request = poolResult.request();
-    const { searchType, searchValue, limit = 10, userId } = req.query;
-    _validateSearch(searchType, searchValue, userId);
+    const { searchType, searchValue, limit = 20, offset, userId } = req.query;
+    _validateSearch(searchType, searchValue, offset, userId);
     console.log("search validated");
     let queryStatement = "";
-    queryStatement = _getQuery(searchType, limit, searchValue);
+    queryStatement = _getQuery(searchType, limit, offset, searchValue);
     console.log("query statement", queryStatement);
     const result = await request.query(queryStatement);
 
@@ -55,22 +55,22 @@ async function addSearchRecordToFirebase(
   await userRef.collection(usersSearchCollection).add(searchDoc);
 }
 
-function _getQuery(searchType, limit, searchValue) {
+function _getQuery(searchType, limit, offset, searchValue) {
   let queryStatement = "";
   switch (searchType) {
     case "name":
-      queryStatement = `SELECT TOP ${limit} * FROM ${usersTable} WHERE name LIKE '%${searchValue}%'`;
+      queryStatement = `SELECT TOP ${limit} * FROM ${usersTable} WHERE name ='${searchValue}'`;
       break;
     case "address":
-      queryStatement = `SELECT TOP ${limit} * FROM ${usersTable} WHERE address LIKE '%${searchValue}%' OR postcode LIKE '%${searchValue}%'`;
+      queryStatement = `SELECT TOP ${limit} * FROM ${usersTable} WHERE address = '${searchValue}' OR postcode = '${searchValue}'`;
       break;
 
     case "phone":
-      queryStatement = `SELECT TOP ${limit} * FROM ${usersTable} WHERE tel1 LIKE '%${searchValue}%' OR tel2 LIKE '%${searchValue}%' OR tel3 LIKE '%${searchValue}%'`;
+      queryStatement = `SELECT TOP ${limit} * FROM ${usersTable} WHERE tel1 = '${searchValue}' OR tel2 = '${searchValue}' OR tel3 = '${searchValue}'`;
       break;
 
     case "ic":
-      queryStatement = `SELECT TOP ${limit} * FROM ${usersTable} WHERE ic LIKE '%${searchValue}%'`;
+      queryStatement = `SELECT TOP ${limit} * FROM ${usersTable} WHERE ic = '${searchValue}'`;
       break;
 
     default:
@@ -79,7 +79,7 @@ function _getQuery(searchType, limit, searchValue) {
   return queryStatement;
 }
 
-function _validateSearch(searchType, searchValue, userId) {
+function _validateSearch(searchType, searchValue, offset, userId) {
   if (!searchType || !searchValue || !userId) {
     throw new BadRequestError("Invalid Request Parameters");
   }
