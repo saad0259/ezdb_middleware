@@ -12,26 +12,21 @@ const getUsers = async (req, res) => {
   try {
     const start = new Date().getTime();
     const poolResult = await pool;
-    console.log(`Got pool in:  ${(new Date().getTime() - start) / 1000} sec `);
 
     const request = poolResult.request();
     const { searchType, searchValue, limit = 20, offset, userId } = req.query;
     _validateSearch(searchType, searchValue, offset, userId);
-    console.log("search validated");
     let queryStatement = "";
     queryStatement = _getQuery(searchType, limit, offset, searchValue);
-    console.log("query statement", queryStatement);
+    let countStatement = _getCountQuery(searchType, searchValue);
     const result = await request.query(queryStatement);
-
-    console.log(
-      `Got result in:  ${(new Date().getTime() - start) / 1000} sec `
-    );
+    const countResult = await request.query(countStatement);
 
     addSearchRecordToFirebase(searchType, searchValue, limit, userId, req);
-    console.log("added to firebase");
-    res.status(StatusCodes.OK).json(result.recordset);
+    res
+      .status(StatusCodes.OK)
+      .json({ data: result.recordset, count: countResult.recordset[0][""] });
   } catch (error) {
-    console.error("Error executing query", error);
     throw new BadRequestError("Something went wrong: " + error);
   }
 };
@@ -54,23 +49,52 @@ async function addSearchRecordToFirebase(
 
   await userRef.collection(usersSearchCollection).add(searchDoc);
 }
+function _getCountQuery(searchType, searchValue) {
+  let queryStatement = "";
+  switch (searchType) {
+    case "name":
+      queryStatement = `SELECT COUNT(*) FROM ${usersTable} WHERE name ='${searchValue}'`;
+      break;
+    case "address":
+      queryStatement = `SELECT COUNT(*) FROM ${usersTable} WHERE address = '${searchValue}' OR postcode = '${searchValue}'`;
+      break;
+
+    case "phone":
+      queryStatement = `SELECT COUNT(*) FROM ${usersTable} WHERE tel1 = '${searchValue}' OR tel2 = '${searchValue}' OR tel3 = '${searchValue}'`;
+      break;
+
+    case "ic":
+      queryStatement = `SELECT COUNT(*) FROM ${usersTable} WHERE ic = '${searchValue}'`;
+      break;
+
+    default:
+      throw new BadRequestError("Invalid search type");
+  }
+  return queryStatement;
+}
 
 function _getQuery(searchType, limit, offset, searchValue) {
   let queryStatement = "";
   switch (searchType) {
     case "name":
-      queryStatement = `SELECT TOP ${limit} * FROM ${usersTable} WHERE name ='${searchValue}'`;
+      // queryStatement = `SELECT TOP ${limit} * FROM ${usersTable} WHERE name ='${searchValue}'`;
+      //implement pagination
+      queryStatement = `SELECT * FROM ${usersTable} WHERE name ='${searchValue}' ORDER BY id OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
       break;
     case "address":
       queryStatement = `SELECT TOP ${limit} * FROM ${usersTable} WHERE address = '${searchValue}' OR postcode = '${searchValue}'`;
+      queryStatement = `SELECT * FROM ${usersTable} WHERE address = '${searchValue}' OR postcode = '${searchValue}' ORDER BY id OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
+
       break;
 
     case "phone":
       queryStatement = `SELECT TOP ${limit} * FROM ${usersTable} WHERE tel1 = '${searchValue}' OR tel2 = '${searchValue}' OR tel3 = '${searchValue}'`;
+      queryStatement = `SELECT * FROM ${usersTable} WHERE tel1 = '${searchValue}' OR tel2 = '${searchValue}' OR tel3 = '${searchValue}' ORDER BY id OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
       break;
 
     case "ic":
       queryStatement = `SELECT TOP ${limit} * FROM ${usersTable} WHERE ic = '${searchValue}'`;
+      queryStatement = `SELECT * FROM ${usersTable} WHERE ic = '${searchValue}' ORDER BY id OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
       break;
 
     default:
@@ -80,7 +104,7 @@ function _getQuery(searchType, limit, offset, searchValue) {
 }
 
 function _validateSearch(searchType, searchValue, offset, userId) {
-  if (!searchType || !searchValue || !userId) {
+  if (!searchType || !searchValue || !userId || !offset) {
     throw new BadRequestError("Invalid Request Parameters");
   }
 }
