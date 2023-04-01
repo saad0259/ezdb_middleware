@@ -39,10 +39,11 @@ async function addSearchRecordToFirebase(
   req
 ) {
   const searchDoc = {
-    searchType: searchType,
-    searchValue: searchValue,
-    limit: limit,
-    userId: userId,
+    searchType,
+    searchValue,
+    limit,
+    userId,
+    offset,
     createdAt: req.admin.firestore.Timestamp.now(),
   };
   const userRef = req.db.collection(usersCollection).doc(userId);
