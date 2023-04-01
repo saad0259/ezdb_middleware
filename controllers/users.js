@@ -22,7 +22,14 @@ const getUsers = async (req, res) => {
     const result = await request.query(queryStatement);
     const countResult = await request.query(countStatement);
 
-    addSearchRecordToFirebase(searchType, searchValue, limit, userId, req);
+    addSearchRecordToFirebase(
+      searchType,
+      searchValue,
+      limit,
+      userId,
+      offset,
+      req
+    );
     res
       .status(StatusCodes.OK)
       .json({ data: result.recordset, count: countResult.recordset[0][""] });
@@ -36,6 +43,7 @@ async function addSearchRecordToFirebase(
   searchValue,
   limit,
   userId,
+  offest,
   req
 ) {
   const searchDoc = {
@@ -43,7 +51,7 @@ async function addSearchRecordToFirebase(
     searchValue,
     limit,
     userId,
-    offset,
+    offset: offest,
     createdAt: req.admin.firestore.Timestamp.now(),
   };
   const userRef = req.db.collection(usersCollection).doc(userId);
