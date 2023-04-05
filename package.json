@@ -1,6 +1,6 @@
 {
   "name": "mega-middleware",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "middleware for mega app created for peter",
   "main": "index.js",
   "engines": {
