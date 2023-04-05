@@ -10,15 +10,27 @@ const usersSearchCollection = "userSearch";
 
 const getUsers = async (req, res) => {
   try {
-    const start = new Date().getTime();
     const poolResult = await pool;
 
     const request = poolResult.request();
-    const { searchType, searchValue, limit = 20, offset, userId } = req.query;
+    const {
+      searchType,
+      searchValue,
+      limit = 20,
+      offset,
+      userId,
+      postcode,
+    } = req.query;
     _validateSearch(searchType, searchValue, offset, userId);
     let queryStatement = "";
-    queryStatement = _getQuery(searchType, limit, offset, searchValue);
-    let countStatement = _getCountQuery(searchType, searchValue);
+    queryStatement = _getQuery(
+      searchType,
+      limit,
+      offset,
+      searchValue,
+      postcode
+    );
+    let countStatement = _getCountQuery(searchType, searchValue, postcode);
     const result = await request.query(queryStatement);
     const countResult = await request.query(countStatement);
 
@@ -28,6 +40,7 @@ const getUsers = async (req, res) => {
       limit,
       userId,
       offset,
+      postcode,
       req
     );
     res
@@ -44,11 +57,13 @@ async function addSearchRecordToFirebase(
   limit,
   userId,
   offest,
+  postcode,
   req
 ) {
   const searchDoc = {
     searchType,
     searchValue,
+    postcode: postcode == undefined ? "" : postcode,
     limit,
     userId,
     offset: offest,
@@ -58,14 +73,16 @@ async function addSearchRecordToFirebase(
 
   await userRef.collection(usersSearchCollection).add(searchDoc);
 }
-function _getCountQuery(searchType, searchValue) {
+function _getCountQuery(searchType, searchValue, postcode) {
   let queryStatement = "";
   switch (searchType) {
     case "name":
       queryStatement = `SELECT COUNT(*) FROM ${usersTable} WHERE name ='${searchValue}'`;
       break;
     case "address":
-      queryStatement = `SELECT COUNT(*) FROM ${usersTable} WHERE address = '${searchValue}' OR postcode = '${searchValue}'`;
+      queryStatement = `SELECT COUNT(*) FROM ${usersTable} WHERE address = '${searchValue}' AND postcode = '${
+        postcode == undefined ? "" : postcode
+      }'`;
       break;
 
     case "phone":
@@ -82,7 +99,7 @@ function _getCountQuery(searchType, searchValue) {
   return queryStatement;
 }
 
-function _getQuery(searchType, limit, offset, searchValue) {
+function _getQuery(searchType, limit, offset, searchValue, postcode) {
   let queryStatement = "";
   switch (searchType) {
     case "name":
@@ -91,18 +108,15 @@ function _getQuery(searchType, limit, offset, searchValue) {
       queryStatement = `SELECT * FROM ${usersTable} WHERE name ='${searchValue}' ORDER BY id OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
       break;
     case "address":
-      queryStatement = `SELECT TOP ${limit} * FROM ${usersTable} WHERE address = '${searchValue}' OR postcode = '${searchValue}'`;
-      queryStatement = `SELECT * FROM ${usersTable} WHERE address = '${searchValue}' OR postcode = '${searchValue}' ORDER BY id OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
-
+      queryStatement = `SELECT * FROM ${usersTable} WHERE address = '${searchValue}' AND postcode = '${
+        postcode == undefined ? "" : postcode
+      }' ORDER BY id OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
       break;
-
     case "phone":
-      queryStatement = `SELECT TOP ${limit} * FROM ${usersTable} WHERE tel1 = '${searchValue}' OR tel2 = '${searchValue}' OR tel3 = '${searchValue}'`;
       queryStatement = `SELECT * FROM ${usersTable} WHERE tel1 = '${searchValue}' OR tel2 = '${searchValue}' OR tel3 = '${searchValue}' ORDER BY id OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
       break;
 
     case "ic":
-      queryStatement = `SELECT TOP ${limit} * FROM ${usersTable} WHERE ic = '${searchValue}'`;
       queryStatement = `SELECT * FROM ${usersTable} WHERE ic = '${searchValue}' ORDER BY id OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
       break;
 
