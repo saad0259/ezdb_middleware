@@ -80,7 +80,7 @@ function _getCountQuery(searchType, searchValue, postcode) {
       queryStatement = `SELECT COUNT(*) FROM ${usersTable} WHERE name ='${searchValue}'`;
       break;
     case "address":
-      queryStatement = `SELECT COUNT(*) FROM ${usersTable} WHERE address = '${searchValue}' AND postcode = '${
+      queryStatement = `SELECT COUNT(*) FROM ${usersTable} WHERE address LIKE '%${searchValue}%' AND postcode = '${
         postcode == undefined ? "" : postcode
       }'`;
       break;
@@ -108,7 +108,7 @@ function _getQuery(searchType, limit, offset, searchValue, postcode) {
       queryStatement = `SELECT * FROM ${usersTable} WHERE name ='${searchValue}' ORDER BY id OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
       break;
     case "address":
-      queryStatement = `SELECT * FROM ${usersTable} WHERE address = '${searchValue}' AND postcode = '${
+      queryStatement = `SELECT * FROM ${usersTable} WHERE address LIKE '%${searchValue}%' AND postcode = '${
         postcode == undefined ? "" : postcode
       }' ORDER BY id OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
       break;
