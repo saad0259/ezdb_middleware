@@ -50,7 +50,7 @@ const getAllSearches = async (req, res) => {
   // get all searches from the database for a user where offset is 0
   const poolResult = await pool;
   const request = poolResult.request();
-  const result = await request.query(`SELECT * FROM ${searchesTable}`);
+  const result = await request.query(`select * from searches`);
   res.status(StatusCodes.OK).json(result.recordset);
 };
 
