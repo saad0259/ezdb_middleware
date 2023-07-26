@@ -47,7 +47,7 @@ const register = async (req, res) => {
             @otp, @otpCreatedAt)`
     );
 
-  const otpResponse = await sendOTP(phone, otp);
+  await sendOTP(phone, otp);
 
   res.status(StatusCodes.CREATED).json({
     message: "User created successfully",
@@ -60,7 +60,7 @@ const verifyOtp = async (req, res) => {
   const poolInstance = await pool;
   const request = poolInstance.request();
 
-  await _checkIfUserExists(request, phone);
+  const user = await _checkIfUserExists(request, phone);
 
   const otpResult = await request
     .input("otpphone", sql.VarChar, phone)
@@ -88,8 +88,21 @@ const verifyOtp = async (req, res) => {
       .input("otpphone2", sql.VarChar, phone)
       .query(`DELETE FROM ${otpTable} WHERE phone = @otpphone2`);
 
+    //create token
+    const token = _createJWT(user);
+
+    const userData = {
+      id: user.recordset[0].id,
+      phone: user.recordset[0].phone,
+      membershipExpiry: user.recordset[0].membershipExpiry,
+    };
+
     res.status(StatusCodes.OK).json({
       message: "OTP verified successfully",
+      data: {
+        token,
+        ...userData,
+      },
     });
   } else {
     throw new BadRequestError("Invalid OTP");
@@ -206,7 +219,7 @@ const forgotPassword = async (req, res) => {
   const poolInstance = await pool;
   const request = poolInstance.request();
 
-  _checkIfUserExists(request, phone);
+  await _checkIfUserExists(request, phone);
 
   //check if otp already exists
   const otpResult = await request
@@ -335,8 +348,9 @@ async function _checkIfUserExists(request, phone) {
     .query(`SELECT * FROM ${usersTable} WHERE phone = @userphone`);
 
   if (user.recordset.length === 0) {
-    throw new NotFoundError("User not found");
+    throw new BadRequestError("User not found");
   }
+  return user;
 }
 
 function _createJWT(user) {
@@ -370,7 +384,21 @@ async function _preventDuplicateUser(request, userPhone) {
     .input("userPhone", sql.VarChar, userPhone)
     .query(`SELECT * FROM ${usersTable} WHERE phone = @userPhone`);
 
-  if (user.recordset.length > 0) {
+  if (user.recordset.length > 0 && user.recordset[0].isVerified) {
     throw new BadRequestError("User already exists");
   }
+  if (user.recordset.length > 0 && !user.recordset[0].isVerified) {
+    //delete old otp
+    await request
+
+      .input("otpphone2", sql.VarChar, userPhone)
+      .query(`DELETE FROM ${otpTable} WHERE phone = @otpphone2`);
+
+    //delete old user
+    await request
+      .input("userPhone2", sql.VarChar, userPhone)
+      .query(`DELETE FROM ${usersTable} WHERE phone = @userPhone2`);
+  }
+
+  return user;
 }
