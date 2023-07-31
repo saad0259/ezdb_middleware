@@ -55,8 +55,12 @@ app.get("/", (req, res) => {
 
 // app.use(/\/api\/v1\/(users)/, attachConnectionPool);
 
+const multer = require("multer");
+const multerStorage = multer.memoryStorage();
+const upload = multer({ storage: multerStorage });
+
 app.use("/api/v1/auth", authRouter);
-app.use("/api/v1/records", recordsRouter);
+app.use("/api/v1/records", upload.single("file"), recordsRouter);
 app.use("/api/v1/offers", offersRouter);
 app.use("/api/v1/users", usersRouter);
 

@@ -1,6 +1,7 @@
 const { StatusCodes } = require("http-status-codes");
 const { BadRequestError } = require("../errors");
 const sql = require("mssql");
+const Excel = require("exceljs");
 
 const pool = require("../db/connection");
 
@@ -75,7 +76,6 @@ async function addSearchRecord(
     postcode == undefined ? "" : postcode
   }', ${limit}, ${userId}, ${offest}, '${new Date().toISOString()}')`;
   const result = await request.query(queryStatement);
-  // console.log("result", result);
   return result;
 }
 function _getCountQuery(searchType, searchValue, postcode) {
@@ -137,4 +137,107 @@ function _validateSearch(searchType, searchValue, offset, userId) {
   }
 }
 
-module.exports = { getRecords };
+const addRecord = async (req, res) => {
+  try {
+    const file = req.file;
+
+    const poolResult = await pool;
+    const request = poolResult.request();
+
+    //validate file type
+    if (!file.originalname.match(/\.(xlsx)$/)) {
+      throw new BadRequestError("Invalid file type");
+    }
+
+    const workbook = new Excel.Workbook();
+    const records = [];
+    await workbook.xlsx.load(file.buffer).then((workbook) => {
+      const worksheet = workbook.getWorksheet(1);
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber > 1) {
+          const record = {
+            name: row.getCell(1).value,
+            ic: row.getCell(2).value,
+            tel1: row.getCell(3).value,
+            tel2: row.getCell(4).value,
+            tel3: row.getCell(5).value,
+            postcode: row.getCell(6).value,
+            address: row.getCell(7).value,
+          };
+          records.push(record);
+        }
+      });
+    });
+    //convert to string if number and not null
+    records.forEach((record) => {
+      Object.keys(record).forEach((key) => {
+        if (record[key] && typeof record[key] === "number") {
+          record[key] = record[key].toString();
+        }
+        //trim to 5 if postcode and not null
+        if (record[key] && key === "postcode") {
+          record[key] = record[key].toString().substring(0, 5);
+        }
+        if (record[key] && key === "ic") {
+          record[key] = record[key].toString().substring(0, 12);
+        }
+      });
+    });
+
+    const columnNames = Object.keys(records[0]);
+
+    const columns = columnNames.map((columnName) => {
+      return {
+        name: columnName,
+        type: getColumnType(columnName),
+      };
+    });
+
+    const table = new sql.Table(recordsTable);
+    columns.forEach((column) => {
+      table.columns.add(column.name, column.type, {
+        nullable: true,
+      });
+    });
+
+    records.forEach((record) => {
+      table.rows.add(
+        record.name,
+        record.ic,
+        record.tel1,
+        record.tel2,
+        record.tel3,
+        record.postcode,
+        record.address
+      );
+    });
+
+    await request.bulk(table);
+    res.status(StatusCodes.OK).json({ message: "Records added successfully" });
+  } catch (error) {
+    throw new BadRequestError(error);
+  }
+};
+
+function getColumnType(columnName) {
+  switch (columnName) {
+    case "name":
+      return sql.VarChar(70);
+    case "ic":
+      return sql.VarChar(15);
+    case "tel1":
+      return sql.VarChar(255);
+    case "tel2":
+      return sql.VarChar(255);
+    case "tel3":
+      return sql.VarChar(255);
+    case "address":
+      return sql.VarChar(150);
+    case "postcode":
+      return sql.VarChar(5);
+    default:
+      return sql.VarChar(255);
+  }
+}
+
+module.exports = { getRecords, addRecord };
