@@ -69,26 +69,27 @@ app.use(errorHandlerMiddleware);
 
 const port = process.env.PORT || 5500;
 
-// const options = {
-//   key: fs.readFileSync("./certs/key.pem"),
-//   cert: fs.readFileSync("./certs/cert.pem"),
-// };
-
-// https.createServer(options, app).listen(port, () => {
-//   console.log(`Server is listening at https://localhost:${port} ...`);
-// });
-
-const start = async () => {
-  try {
-    app.listen(port, () =>
-      console.log(`Server is listening at http://localhost:${port} ...`)
-    );
-  } catch (error) {
-    console.log(error);
-  }
+const options = {
+  key: fs.readFileSync("./certs/5_9_88_108.key"),
+  cert: fs.readFileSync("./certs/5_9_88_108.pem"),
+  ca: fs.readFileSync("./certs/5_9_88_108.pem"),
 };
 
-start();
+https.createServer(options, app).listen(port, () => {
+  console.log(`Server is listening at https://localhost:${port} ...`);
+});
+
+// const start = async () => {
+//   try {
+//     app.listen(port, () =>
+//       console.log(`Server is listening at http://localhost:${port} ...`)
+//     );
+//   } catch (error) {
+//     console.log(error);
+//   }
+// };
+
+// start();
 
 // Export the Express API
 
