@@ -85,6 +85,7 @@ function _getCountQuery(searchType, searchValue, postcode) {
       queryStatement = `SELECT COUNT(*) FROM ${recordsTable} WHERE name ='${searchValue}'`;
       break;
     case "address":
+      searchValue = searchValue.replaceAll(" ", "%");
       queryStatement = `SELECT COUNT(*) FROM ${recordsTable} WHERE address LIKE '%${searchValue}%' AND postcode = '${
         postcode == undefined ? "" : postcode
       }'`;
@@ -113,6 +114,7 @@ function _getQuery(searchType, limit, offset, searchValue, postcode) {
       queryStatement = `SELECT * FROM ${recordsTable} WHERE name ='${searchValue}' ORDER BY id OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
       break;
     case "address":
+      searchValue = searchValue.replaceAll(" ", "%");
       queryStatement = `SELECT * FROM ${recordsTable} WHERE address LIKE '%${searchValue}%' AND postcode = '${
         postcode == undefined ? "" : postcode
       }' ORDER BY id OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
