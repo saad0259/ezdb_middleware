@@ -13,9 +13,7 @@ const getOffers = async (req, res) => {
 
     const request = poolResult.request();
 
-    const result = await request.query(
-      `SELECT * FROM ${offersTable} where isActive = 1`
-    );
+    const result = await request.query(`SELECT * FROM ${offersTable}`);
 
     res.status(StatusCodes.OK).json(result.recordset);
   } catch (error) {
