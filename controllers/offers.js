@@ -13,7 +13,9 @@ const getOffers = async (req, res) => {
 
     const request = poolResult.request();
 
-    const result = await request.query(`SELECT * FROM ${offersTable}`);
+    const result = await request.query(
+      `SELECT * FROM ${offersTable} where isActive = 1`
+    );
 
     res.status(StatusCodes.OK).json(result.recordset);
   } catch (error) {
@@ -22,7 +24,7 @@ const getOffers = async (req, res) => {
 };
 
 const updateOffer = async (req, res) => {
-  const { name, days, price } = req.body;
+  const { name, days, price, isActive } = req.body;
   const { id } = req.params;
 
   switch (true) {
@@ -32,13 +34,15 @@ const updateOffer = async (req, res) => {
       throw new BadRequestError("Days is required");
     case !price:
       throw new BadRequestError("Price is required");
+    // case !isActive:
+    //   throw new BadRequestError("isActive is required");
   }
 
   try {
     const poolResult = await pool;
     const request = poolResult.request();
     await request.query(
-      `UPDATE ${offersTable} SET name = '${name}', days = '${days}', price = '${price}' WHERE id = ${id}`
+      `UPDATE ${offersTable} SET name = '${name}', days = '${days}', price = '${price}', isActive='${isActive}' WHERE id = ${id}`
     );
     res.status(StatusCodes.OK).json({ message: "Offer updated" });
   } catch (error) {
