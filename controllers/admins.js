@@ -12,11 +12,17 @@ const createAdmin = async (req, res) => {
     password,
   });
 
+  //set custom claims
+  await admin.auth().setCustomUserClaims(user.uid, {
+    role: "sub-admin",
+    verified: true,
+  });
+
   const newAdmin = {
     email,
     role: "sub-admin",
-    verified: true,
     isActive: true,
+    createdAt: admin.firestore.Timestamp.fromDate(new Date()),
   };
 
   // const result = await db.collection(adminCollection).add(newAdmin);
