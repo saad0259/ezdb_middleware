@@ -21,6 +21,25 @@ const getLogs = async (req, res) => {
   }
 };
 
+const getLogsById = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const poolResult = await pool;
+
+    const request = poolResult.request();
+
+    const result = await request.query(
+      `SELECT * FROM ${logsTable} WHERE 
+      createdBy = '${id}'`
+    );
+
+    res.status(StatusCodes.OK).json(result.recordset);
+  } catch (error) {
+    throw new BadRequestError("Something went wrong: " + error);
+  }
+};
+
 const createLog = async (req, res) => {
   const { adminId, content } = req.body;
 
@@ -46,4 +65,4 @@ const createLog = async (req, res) => {
   }
 };
 
-module.exports = { getLogs, createLog };
+module.exports = { getLogs, createLog, getLogsById };
