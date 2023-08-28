@@ -1,6 +1,6 @@
 const { StatusCodes } = require("http-status-codes");
 const { BadRequestError } = require("../errors");
-const moment = require("moment");
+const fetch = require("node-fetch");
 
 const sql = require("mssql");
 
@@ -67,10 +67,61 @@ const updateMembershipExpiry = async (req, res) => {
   res.status(StatusCodes.OK).json({ message: "Membership updated" });
 };
 
+const updateFcmToken = async (req, res) => {
+  const poolResult = await pool;
+  const request = poolResult.request();
+  const { userId } = req.params;
+  const { fcmToken } = req.body;
+
+  if (!fcmToken) {
+    throw new BadRequestError("FCM Token is required");
+  }
+
+  await request.query(
+    `UPDATE ${usersTable} SET fcmToken = '${fcmToken}' WHERE id = ${userId}`
+  );
+
+  res.status(StatusCodes.OK).json({ message: "FCM Token updated" });
+};
+
+const notifyUser = async (req, res, respond = true) => {
+  const { title, body, token } = req.body;
+  const { admin } = req;
+
+  if (!title || !body || !token) {
+    throw new BadRequestError("Please provide title, body and token");
+  }
+
+  console.log("admin.messaging()", admin.messaging());
+
+  const payload = {
+    notification: {
+      title,
+      body,
+    },
+  };
+
+  const response = await admin.messaging().sendToDevice(token, payload);
+
+  if (response.success) {
+    console.log("Notification sent successfully");
+  } else {
+    console.log("Error sending notification:", response.error);
+  }
+
+  if (respond) {
+    res.status(StatusCodes.OK).json(response);
+  } else {
+    return response;
+  }
+};
+
 module.exports = {
   getUsers,
   getUserById,
   getUserSearches,
   updateMembershipExpiry,
   getAllSearches,
+  updateFcmToken,
+  notifyUser,
 };

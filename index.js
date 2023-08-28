@@ -91,7 +91,7 @@ function attachAdminAndDb(req, res, next) {
   next();
 }
 
-app.use(/\/api\/v1\/(admins)/, attachAdminAndDb);
+app.use(/\/api\/v1\/(admins|users)/, attachAdminAndDb);
 
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/records", upload.single("file"), recordsRouter);
