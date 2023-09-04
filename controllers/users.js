@@ -1,6 +1,7 @@
 const { StatusCodes } = require("http-status-codes");
 const { BadRequestError } = require("../errors");
 const fetch = require("node-fetch");
+const bcrypt = require("bcryptjs");
 
 const sql = require("mssql");
 
@@ -8,6 +9,7 @@ const pool = require("../db/connection");
 
 const usersTable = "users";
 const searchesTable = "searches";
+const membershipLogsTable = "user_membership_logs";
 
 const getUsers = async (req, res) => {
   // get all users from the database
@@ -64,6 +66,8 @@ const updateMembershipExpiry = async (req, res) => {
     `UPDATE ${usersTable} SET membershipExpiry = '${membershipExpiry}' WHERE id = ${userId}`
   );
 
+  await _addMembershipLog(req, res);
+
   res.status(StatusCodes.OK).json({ message: "Membership updated" });
 };
 
@@ -82,6 +86,42 @@ const updateFcmToken = async (req, res) => {
   );
 
   res.status(StatusCodes.OK).json({ message: "FCM Token updated" });
+};
+
+const deleteUser = async (req, res) => {
+  const poolResult = await pool;
+  const request = poolResult.request();
+  const { phone, password } = req.body;
+
+  if (!phone || !password) {
+    throw new BadRequestError("Please provide phone and password");
+  }
+
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(password, salt);
+
+  const user = await request.query(
+    `SELECT * FROM ${usersTable} WHERE phone = '${phone}'`
+  );
+
+  if (user.recordset.length === 0) {
+    throw new BadRequestError(`No user found`);
+  }
+
+  const isPasswordValid = await bcrypt.compare(
+    password,
+    user.recordset[0].password
+  );
+
+  if (!isPasswordValid) {
+    throw new BadRequestError("Invalid password");
+  }
+
+  const userId = user.recordset[0].id;
+
+  await request.query(`DELETE FROM ${usersTable} WHERE id = ${userId}`);
+
+  res.status(StatusCodes.OK).json({ message: "User deleted" });
 };
 
 const notifyUser = async (req, res, respond = true) => {
@@ -116,6 +156,41 @@ const notifyUser = async (req, res, respond = true) => {
   }
 };
 
+const _addMembershipLog = async (req, res) => {
+  const { userId } = req.params;
+  const { membershipExpiry } = req.body;
+
+  if (!membershipExpiry) {
+    throw new BadRequestError("Please provide membershipExpiry and adminId");
+  }
+
+  const createdAt = new Date().toISOString();
+
+  const poolResult = await pool;
+  const request = poolResult.request();
+
+  await request.query(
+    `INSERT INTO ${membershipLogsTable} (userId, membershipExpiry,  createdAt) VALUES ('${userId}', '${membershipExpiry}', '${createdAt}')`
+  );
+
+  return;
+};
+
+const getMembershipLogs = async (req, res) => {
+  const { userId } = req.params;
+
+  const poolResult = await pool;
+  const request = poolResult.request();
+
+  const result = await request.query(
+    `SELECT * FROM ${membershipLogsTable} WHERE userId = ${userId} ORDER BY createdAt DESC`
+  );
+
+  res.status(StatusCodes.OK).json(result.recordset);
+
+  return;
+};
+
 module.exports = {
   getUsers,
   getUserById,
@@ -124,4 +199,6 @@ module.exports = {
   getAllSearches,
   updateFcmToken,
   notifyUser,
+  getMembershipLogs,
+  deleteUser,
 };

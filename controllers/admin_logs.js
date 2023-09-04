@@ -41,13 +41,15 @@ const getLogsById = async (req, res) => {
 };
 
 const createLog = async (req, res) => {
-  const { adminId, content } = req.body;
+  const { adminId, content, email } = req.body;
 
   switch (true) {
     case !adminId:
       throw new BadRequestError("Admin Id is required");
     case !content:
       throw new BadRequestError("Content is required");
+    case !email:
+      throw new BadRequestError("Email is required");
   }
 
   const createdAt = new Date().toISOString();
@@ -56,7 +58,7 @@ const createLog = async (req, res) => {
     const poolResult = await pool;
     const request = poolResult.request();
     await request.query(
-      `INSERT INTO ${logsTable} (createdBy, contents, createdAt) VALUES ('${adminId}', '${content}', '${createdAt}')`
+      `INSERT INTO ${logsTable} (createdBy, contents, email, createdAt) VALUES ('${adminId}', '${content}', '${email}', '${createdAt}')`
     );
 
     res.status(StatusCodes.OK).json({ message: "Log added" });
