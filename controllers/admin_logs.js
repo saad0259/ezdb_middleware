@@ -13,7 +13,9 @@ const getLogs = async (req, res) => {
 
     const request = poolResult.request();
 
-    const result = await request.query(`SELECT * FROM ${logsTable} `);
+    const result = await request.query(
+      `SELECT * FROM ${logsTable} ORDER BY createdAt DESC `
+    );
 
     res.status(StatusCodes.OK).json(result.recordset);
   } catch (error) {
@@ -31,7 +33,7 @@ const getLogsById = async (req, res) => {
 
     const result = await request.query(
       `SELECT * FROM ${logsTable} WHERE 
-      createdBy = '${id}'`
+      createdBy = '${id}' ORDER BY createdAt DESC`
     );
 
     res.status(StatusCodes.OK).json(result.recordset);
