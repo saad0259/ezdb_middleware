@@ -15,6 +15,7 @@ const {
 
 router.route("/:userId/membershipLogs").get(getMembershipLogs);
 router.route("/searches").get(getAllSearches);
+router.route("/:userId/searches").get(getUserSearches);
 router.route("/:userId/notify").post(notifyUser);
 router.route("/:userId/fcmToken").patch(updateFcmToken);
 router.route("/:userId/membership").patch(updateMembershipExpiry);

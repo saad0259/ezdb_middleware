@@ -17,7 +17,9 @@ const getUsers = async (req, res) => {
   const poolResult = await pool;
   const request = poolResult.request();
 
-  const result = await request.query(`SELECT * FROM ${usersTable}`);
+  const result = await request.query(
+    `SELECT * FROM ${usersTable} order by createdAt desc`
+  );
   res.status(StatusCodes.OK).json(result.recordset);
 };
 
@@ -43,7 +45,7 @@ const getUserSearches = async (req, res) => {
   const request = poolResult.request();
   const { userId } = req.params;
   const result = await request.query(
-    `SELECT * FROM ${searchesTable} WHERE userId = ${userId} AND offset = 0`
+    `SELECT * FROM ${searchesTable} WHERE userId = ${userId} AND offset = 0 ORDER BY createdAt DESC`
   );
   res.status(StatusCodes.OK).json(result.recordset);
 };
@@ -52,7 +54,9 @@ const getAllSearches = async (req, res) => {
   // get all searches from the database for a user where offset is 0
   const poolResult = await pool;
   const request = poolResult.request();
-  const result = await request.query(`select * from searches`);
+  const result = await request.query(
+    `select * from searches ORDER BY createdAt DESC`
+  );
   res.status(StatusCodes.OK).json(result.recordset);
 };
 

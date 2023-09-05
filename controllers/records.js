@@ -111,20 +111,20 @@ function _getQuery(searchType, limit, offset, searchValue, postcode) {
     case "name":
       // queryStatement = `SELECT TOP ${limit} * FROM ${usersTable} WHERE name ='${searchValue}'`;
       //implement pagination
-      queryStatement = `SELECT * FROM ${recordsTable} WHERE name ='${searchValue}' ORDER BY id OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
+      queryStatement = `SELECT * FROM ${recordsTable} WHERE name ='${searchValue}' ORDER BY ic OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
       break;
     case "address":
       searchValue = searchValue.replaceAll(" ", "%");
       queryStatement = `SELECT * FROM ${recordsTable} WHERE address LIKE '%${searchValue}%' AND postcode = '${
         postcode == undefined ? "" : postcode
-      }' ORDER BY id OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
+      }' ORDER BY ic OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
       break;
     case "phone":
-      queryStatement = `SELECT * FROM ${recordsTable} WHERE tel1 = '${searchValue}' OR tel2 = '${searchValue}' OR tel3 = '${searchValue}' ORDER BY id OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
+      queryStatement = `SELECT * FROM ${recordsTable} WHERE tel1 = '${searchValue}' OR tel2 = '${searchValue}' OR tel3 = '${searchValue}' ORDER BY ic OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
       break;
 
     case "ic":
-      queryStatement = `SELECT * FROM ${recordsTable} WHERE ic = '${searchValue}' ORDER BY id OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
+      queryStatement = `SELECT * FROM ${recordsTable} WHERE ic = '${searchValue}' ORDER BY ic OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
       break;
 
     default:
