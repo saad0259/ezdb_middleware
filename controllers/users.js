@@ -136,8 +136,6 @@ const notifyUser = async (req, res, respond = true) => {
     throw new BadRequestError("Please provide title, body and token");
   }
 
-  console.log("admin.messaging()", admin.messaging());
-
   const payload = {
     notification: {
       title,
@@ -147,11 +145,12 @@ const notifyUser = async (req, res, respond = true) => {
 
   const response = await admin.messaging().sendToDevice(token, payload);
 
-  if (response.success) {
-    console.log("Notification sent successfully");
-  } else {
-    console.log("Error sending notification:", response.error);
-  }
+  // if (response.success) {
+  //   console.log("Notification sent successfully");
+  // } else {
+  //   console.log("response is", response);
+  //   console.log("Error sending notification:", response.error);
+  // }
 
   if (respond) {
     res.status(StatusCodes.OK).json(response);

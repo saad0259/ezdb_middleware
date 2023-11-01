@@ -5,6 +5,8 @@ const jwt = require("jsonwebtoken");
 const otpGenerator = require("otp-generator");
 const pool = require("../db/connection");
 
+const { notifyUser } = require("./users");
+
 const { sendOTP } = require("../services/sms_service");
 
 const sql = require("mssql");
@@ -157,11 +159,11 @@ const resendOtp = async (req, res) => {
 };
 
 const login = async (req, res) => {
-  const { phone, password } = req.body;
+  const { phone, password, fcmToken } = req.body;
 
-  if (!phone || !password) {
-    throw new BadRequestError("Phone and password are required");
-  }
+  const { admin } = req;
+
+  _validateLoginReq(phone, password, fcmToken);
 
   const poolInstance = await pool;
   const request = poolInstance.request();
@@ -197,6 +199,38 @@ const login = async (req, res) => {
   }
 
   const token = _createJWT(user);
+
+  console.log("old fcmToken is", user.recordset[0].fcmToken);
+
+  if (
+    fcmToken !== user.recordset[0].fcmToken &&
+    user.recordset[0].fcmToken.length > 0
+  ) {
+    try {
+      const reqData = {
+        body: {
+          title: "Forced Logout",
+          body: "Another device logged in to this account",
+          token: user.recordset[0].fcmToken,
+        },
+        admin,
+      };
+      await notifyUser(reqData, false);
+    } catch (error) {
+      console.log("error is", error);
+    }
+    //send logout notification
+    console.log("new phone");
+  }
+
+  //add fcmToken and token to user
+  await request
+    .input("userPhone2", sql.VarChar, phone)
+    .input("fcmToken", sql.VarChar, fcmToken)
+    .input("token", sql.VarChar, token)
+    .query(
+      `UPDATE ${usersTable} SET fcmToken = @fcmToken, authToken = @token WHERE phone = @userPhone2`
+    );
 
   const userData = {
     id: user.recordset[0].id,
@@ -402,3 +436,14 @@ async function _preventDuplicateUser(request, userPhone) {
 
   return user;
 }
+
+_validateLoginReq = (phone, password, fcmToken) => {
+  switch (true) {
+    case !phone:
+      throw new BadRequestError("Phone is required");
+    case !password:
+      throw new BadRequestError("Password is required");
+    case !fcmToken:
+      throw new BadRequestError("FCM Token is required");
+  }
+};
