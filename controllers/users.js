@@ -28,12 +28,17 @@ const getUserById = async (req, res) => {
   const poolResult = await pool;
   const request = poolResult.request();
   const { userId } = req.params;
+  let authToken = req.headers.authorization.split(" ")[1];
   const result = await request.query(
     `SELECT * FROM ${usersTable} WHERE id = ${userId}`
   );
 
   if (result.recordset.length === 0) {
     throw new BadRequestError(`No user found`);
+  }
+
+  if (authToken !== result.recordset[0].authToken) {
+    throw new BadRequestError(`Invalid auth token`);
   }
 
   res.status(StatusCodes.OK).json(result.recordset);
@@ -144,13 +149,6 @@ const notifyUser = async (req, res, respond = true) => {
   };
 
   const response = await admin.messaging().sendToDevice(token, payload);
-
-  // if (response.success) {
-  //   console.log("Notification sent successfully");
-  // } else {
-  //   console.log("response is", response);
-  //   console.log("Error sending notification:", response.error);
-  // }
 
   if (respond) {
     res.status(StatusCodes.OK).json(response);
