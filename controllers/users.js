@@ -28,7 +28,12 @@ const getUserById = async (req, res) => {
   const poolResult = await pool;
   const request = poolResult.request();
   const { userId } = req.params;
-  let authToken = req.headers.authorization.split(" ")[1];
+  let authToken = req.headers.authorization;
+  if (!authToken) {
+    throw new BadRequestError(`Authorization header is missing`);
+  }
+  authToken = authToken.split(" ")[1];
+
   const result = await request.query(
     `SELECT * FROM ${usersTable} WHERE id = ${userId}`
   );
