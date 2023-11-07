@@ -1,6 +1,8 @@
 const { StatusCodes } = require("http-status-codes");
 const { BadRequestError } = require("../errors");
 const fetch = require("node-fetch");
+const jwt = require("jsonwebtoken");
+
 const bcrypt = require("bcryptjs");
 
 const sql = require("mssql");
@@ -27,15 +29,16 @@ const getUserById = async (req, res) => {
   // get a single user from the database
   const poolResult = await pool;
   const request = poolResult.request();
-  const { userId } = req.params;
   let authToken = req.headers.authorization;
+  const userdata = await decodeToken(req, res);
+  const { id } = userdata;
   if (!authToken) {
     throw new BadRequestError(`Authorization header is missing`);
   }
   authToken = authToken.split(" ")[1];
 
   const result = await request.query(
-    `SELECT * FROM ${usersTable} WHERE id = ${userId}`
+    `SELECT * FROM ${usersTable} WHERE id = ${id}`
   );
 
   if (result.recordset.length === 0) {
@@ -207,4 +210,11 @@ module.exports = {
   notifyUser,
   getMembershipLogs,
   deleteUser,
+};
+
+const decodeToken = async (req, res) => {
+  const token = req.headers.authorization.split(" ")[1];
+  const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+  req.userData = decodedToken;
+  return decodedToken;
 };
