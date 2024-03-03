@@ -7,6 +7,9 @@ const helmet = require("helmet");
 const cors = require("cors");
 const xss = require("xss-clean");
 const rateLimiter = require("express-rate-limit");
+
+const Stripe = require("stripe");
+
 const express = require("express");
 const app = express();
 
@@ -43,6 +46,7 @@ const offersRouter = require("./routes/offers");
 const usersRouter = require("./routes/users");
 const adminRouter = require("./routes/admins");
 const adminLogsRouter = require("./routes/admin_logs");
+const paymentsRouter = require("./routes/payments");
 
 const notFoundMiddleware = require("./middleware/not-found");
 const errorHandlerMiddleware = require("./middleware/error-handler");
@@ -57,7 +61,14 @@ app.use(
   })
 );
 app.use(express.json());
-app.use(helmet());
+app.use(
+  helmet.contentSecurityPolicy({
+    useDefaults: true,
+    directives: {
+      "img-src": ["'self'", "https: data:"],
+    },
+  })
+);
 app.use(cors());
 app.use(xss());
 
@@ -85,13 +96,20 @@ const multer = require("multer");
 const multerStorage = multer.memoryStorage();
 const upload = multer({ storage: multerStorage });
 
+function attachStripe(req, res, next) {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  req.stripe = stripe;
+  next();
+}
+
 function attachAdminAndDb(req, res, next) {
   req.admin = admin;
   req.db = db;
   next();
 }
 
-app.use(/\/api\/v1\/(admins|users|auth)/, attachAdminAndDb);
+app.use(/\/api\/v1\/(admins|users|auth|payments)/, attachAdminAndDb);
+app.use(/\/api\/v1\/(payments)/, attachStripe);
 
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/records", upload.single("file"), recordsRouter);
@@ -99,11 +117,12 @@ app.use("/api/v1/offers", offersRouter);
 app.use("/api/v1/users", usersRouter);
 app.use("/api/v1/admins/logs", adminLogsRouter);
 app.use("/api/v1/admins", adminRouter);
+app.use("/api/v1/payments", paymentsRouter);
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
 
-const port = process.env.PORT || 5500;
+const port = process.env.PORT || 5501;
 
 const options = {
   key: fs.readFileSync("./certs/5_9_88_108.key"),

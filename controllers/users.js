@@ -1,11 +1,8 @@
 const { StatusCodes } = require("http-status-codes");
 const { BadRequestError } = require("../errors");
-const fetch = require("node-fetch");
 const jwt = require("jsonwebtoken");
 
 const bcrypt = require("bcryptjs");
-
-const sql = require("mssql");
 
 const pool = require("../db/connection");
 

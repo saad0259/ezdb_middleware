@@ -1,8 +1,6 @@
 const { StatusCodes } = require("http-status-codes");
 const { BadRequestError, NotFoundError } = require("../errors");
 
-const sql = require("mssql");
-
 const pool = require("../db/connection");
 
 const offersTable = "offer";
