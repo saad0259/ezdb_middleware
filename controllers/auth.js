@@ -200,7 +200,7 @@ const login = async (req, res) => {
 
   const token = _createJWT(user);
 
-  console.log("old fcmToken is", user.recordset[0].fcmToken);
+  // console.log("old fcmToken is", user.recordset[0].fcmToken);
 
   if (
     fcmToken !== user.recordset[0].fcmToken &&
