@@ -13,8 +13,9 @@ const sql = require("mssql");
 
 const { validateUser } = require("../models/User");
 
-const usersTable = "users";
-const otpTable = "otp";
+const usersTable = "ezdb_users";
+const otpTable = "ezdb_otp";
+const allowedUsersTable = "ezdb_allowed_users";
 
 const register = async (req, res) => {
   const { phone, password } = req.body;
@@ -24,8 +25,17 @@ const register = async (req, res) => {
   const poolInstance = await pool;
   const request = poolInstance.request();
 
+  //check if phone exists in allowedUsersTable
+  const allowedUser = await request
+    .input("phone4", sql.VarChar, phone)
+    .query(`SELECT * FROM ${allowedUsersTable} WHERE phone = @phone4`);
+
+  if (allowedUser.recordset.length === 0) {
+    throw new BadRequestError("You are not part of the list to register.");
+  }
+
   //check if user already exists
-  await _preventDuplicateUser(request, phone);
+  var otpCount = await _preventDuplicateUser(request, phone);
 
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(password, salt);
@@ -44,9 +54,10 @@ const register = async (req, res) => {
     .input("otpPhone", sql.VarChar, phone)
     .input("otp", sql.VarChar, otp)
     .input("otpCreatedAt", sql.DateTime, new Date())
+    .input("otpCount", sql.Int, otpCount > 2 ? 0 : otpCount)
     .query(
-      `INSERT INTO ${otpTable} (phone, otp, createdAt) VALUES (@otpPhone,
-            @otp, @otpCreatedAt)`
+      `INSERT INTO ${otpTable} (phone, otp, createdAt, otpCount) VALUES (@otpPhone,
+            @otp, @otpCreatedAt, @otpCount)`
     );
 
   await sendOTP(phone, otp);
@@ -117,6 +128,8 @@ const resendOtp = async (req, res) => {
   const poolInstance = await pool;
   const request = poolInstance.request();
 
+  var otpCounter = 0;
+
   //check if user exists for the phone
   await _checkIfUserExists(request, phone);
 
@@ -127,6 +140,8 @@ const resendOtp = async (req, res) => {
   if (otpResult.recordset.length > 0) {
     //check if otp was created less than a minute ago
     _checkOtpDelay(otpResult);
+
+    otpCounter = (otpResult.recordset[0].otpCount ?? 0) + 1;
 
     //delete otp
     await request
@@ -146,9 +161,10 @@ const resendOtp = async (req, res) => {
     .input("otpphone3", sql.VarChar, phone)
     .input("otp", sql.VarChar, otp)
     .input("otpCreatedAt", sql.DateTime, new Date())
+    .input("otpCount", sql.Int, otpCounter > 2 ? 0 : otpCounter)
     .query(
-      `INSERT INTO ${otpTable} (phone, otp, createdAt) VALUES (@otpphone3,
-            @otp, @otpCreatedAt)`
+      `INSERT INTO ${otpTable} (phone, otp, createdAt, otpCount) VALUES (@otpphone3,
+            @otp, @otpCreatedAt, @otpCount)`
     );
 
   await sendOTP(phone, otp);
@@ -171,6 +187,9 @@ const login = async (req, res) => {
   const user = await request
     .input("userPhone", sql.VarChar, phone)
     .query(`SELECT * FROM ${usersTable} WHERE phone = @userPhone`);
+
+  //check if user exists
+  //check if user is verified
 
   if (user.recordset.length === 0) {
     throw new NotFoundError("User not found");
@@ -203,6 +222,7 @@ const login = async (req, res) => {
   // console.log("old fcmToken is", user.recordset[0].fcmToken);
 
   if (
+    user.recordset[0].fcmToken &&
     fcmToken !== user.recordset[0].fcmToken &&
     user.recordset[0].fcmToken.length > 0
   ) {
@@ -261,9 +281,12 @@ const forgotPassword = async (req, res) => {
     .input("otpphone", sql.VarChar, phone)
     .query(`SELECT * FROM ${otpTable} WHERE phone = @otpphone`);
 
+  var otpCounter = 0;
+
   if (otpResult.recordset.length > 0) {
     //check if otp was created less than a minute ago
     _checkOtpDelay(otpResult);
+    otpCounter = (otpResult.recordset[0].otpCount ?? 0) + 1;
 
     //delete otp
     await request
@@ -283,9 +306,11 @@ const forgotPassword = async (req, res) => {
     .input("otpphone3", sql.VarChar, phone)
     .input("otp", sql.VarChar, otp)
     .input("otpCreatedAt", sql.DateTime, new Date())
+    .input("otpCount", sql.Int, otpCounter > 2 ? 0 : otpCounter)
+
     .query(
-      `INSERT INTO ${otpTable} (phone, otp, createdAt) VALUES (@otpphone3,
-            @otp, @otpCreatedAt)`
+      `INSERT INTO ${otpTable} (phone, otp, createdAt, otpCount) VALUES (@otpphone3,
+            @otp, @otpCreatedAt, @otpCount)`
     );
 
   await sendOTP(phone, otp);
@@ -370,9 +395,17 @@ function _checkOtpDelay(otpResult) {
   const otpCreatedAtPlus1 = new Date(otpCreatedAt.getTime() + 1 * 60000);
   const now = new Date();
 
-  if (now < otpCreatedAtPlus1) {
-    throw new BadRequestError("OTP already sent. Please wait for 1 minute");
+  const otpCounter = otpResult.recordset[0].otpCount ?? 0;
+  const isLessThanaDay = now < new Date(otpCreatedAt.getTime() + 24 * 60000);
+  if (otpCounter >= 2 && isLessThanaDay) {
+    throw new BadRequestError(
+      "OTP limit reached. Please try again in 24 hours."
+    );
   }
+
+  // if (now < otpCreatedAtPlus1) {
+  //   throw new BadRequestError("OTP already sent. Please wait for 1 minute");
+  // }
 }
 
 async function _checkIfUserExists(request, phone) {
@@ -414,6 +447,7 @@ async function _createUser(request, phone, hashedPassword) {
 }
 
 async function _preventDuplicateUser(request, userPhone) {
+  var otpCounter = 0;
   const user = await request
     .input("userPhone", sql.VarChar, userPhone)
     .query(`SELECT * FROM ${usersTable} WHERE phone = @userPhone`);
@@ -422,6 +456,26 @@ async function _preventDuplicateUser(request, userPhone) {
     throw new BadRequestError("User already exists");
   }
   if (user.recordset.length > 0 && !user.recordset[0].isVerified) {
+    const otp = await request.input("phone3", sql.VarChar, userPhone)
+      .query(`SELECT *
+       FROM ${otpTable}
+       WHERE phone = @phone3
+       ORDER BY createdAt DESC`);
+
+    if (otp.recordset.length === 0) {
+      console.log("no old otp");
+    } else {
+      _checkOtpDelay(otp);
+      console.log("old otp : ", otp.recordset[0].otp ?? "");
+
+      //get otpCounter from otp
+      otpCounter = otp.recordset[0].otpCount ?? 0;
+      otpCounter = otpCounter + 1;
+
+      console.log("old otpCounter : ", otp.recordset[0].otpCount ?? 0);
+      console.log("otpCounter : ", otpCounter);
+    }
+
     //delete old otp
     await request
 
@@ -434,7 +488,7 @@ async function _preventDuplicateUser(request, userPhone) {
       .query(`DELETE FROM ${usersTable} WHERE phone = @userPhone2`);
   }
 
-  return user;
+  return otpCounter;
 }
 
 _validateLoginReq = (phone, password, fcmToken) => {

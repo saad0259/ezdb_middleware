@@ -11,8 +11,8 @@ const {
   paymentFailTemplate,
 } = require("../assets/html_templates/payment_fail_screen");
 
-const paymentsTable = "payments";
-const usersTable = "users";
+const paymentsTable = "ezdb_payments";
+const usersTable = "ezdb_users";
 
 const createPaymentIntent = async (req, res) => {
   const { offer, userId, status, createdAt } = req.body;
@@ -54,7 +54,7 @@ const createPaymentIntent = async (req, res) => {
       .input("userId2", userId)
       .input("usedFreeTrial", true)
       .query(
-        `UPDATE users SET usedFreeTrial = @usedFreeTrial WHERE id = @userId2`
+        `UPDATE ${usersTable} SET usedFreeTrial = @usedFreeTrial WHERE id = @userId2`
       );
 
     return res.status(StatusCodes.OK).json({
@@ -181,10 +181,14 @@ async function _successfulPayment(poolResult, paymentId, res, offer) {
 
   const daysIncrement = offer.offerDays ?? offer.days;
 
-  //get user by userId
   const userResult = await request
     .input("userId", offer.userId)
-    .query(`SELECT * FROM users WHERE id = @userId`);
+    .query(`SELECT * FROM ${usersTable} WHERE id = @userId`);
+
+  if (!userResult.recordset.length) {
+    throw new NotFoundError("No such user found");
+  }
+
   var oldMemberShipExpiry = new Date(userResult.recordset[0].membershipExpiry);
 
   var newExpiryDate = new Date(oldMemberShipExpiry);
@@ -196,7 +200,7 @@ async function _successfulPayment(poolResult, paymentId, res, offer) {
     .input("membershipExpiry", newExpiryDate)
     .input("userId2", offer.userId)
     .query(
-      `UPDATE users SET membershipExpiry = @membershipExpiry WHERE id = @userId2`
+      `UPDATE ${usersTable} SET membershipExpiry = @membershipExpiry WHERE id = @userId2`
     );
 
   if (offer.isFreeTrial) {

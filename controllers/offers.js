@@ -3,7 +3,7 @@ const { BadRequestError, NotFoundError } = require("../errors");
 
 const pool = require("../db/connection");
 
-const offersTable = "offer";
+const offersTable = "ezdb_offer";
 
 const getOffers = async (req, res) => {
   try {

@@ -6,9 +6,9 @@ const bcrypt = require("bcryptjs");
 
 const pool = require("../db/connection");
 
-const usersTable = "users";
-const searchesTable = "searches";
-const membershipLogsTable = "user_membership_logs";
+const usersTable = "ezdb_users";
+const searchesTable = "ezdb_searches";
+const membershipLogsTable = "ezdb_user_membership_logs";
 
 const getUsers = async (req, res) => {
   // get all users from the database

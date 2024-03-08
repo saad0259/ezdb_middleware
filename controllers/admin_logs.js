@@ -5,7 +5,7 @@ const sql = require("mssql");
 
 const pool = require("../db/connection");
 
-const logsTable = "admin_logs";
+const logsTable = "ezdb_admin_logs";
 
 const getLogs = async (req, res) => {
   try {

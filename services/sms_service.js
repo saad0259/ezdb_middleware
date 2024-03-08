@@ -35,11 +35,12 @@ const sendSMS = async (recipient, message) => {
 };
 
 const sendOTP = async (recipient, otp) => {
-  const otpWithDashes = otp.slice(0, 3) + "-" + otp.slice(3);
-  const message = `Your app register code is ${otpWithDashes}`;
-
-  const response = await sendSMS(recipient, message);
-  return response;
+  // const otpWithDashes = otp.slice(0, 3) + "-" + otp.slice(3);
+  // const message = `Your verification code is ${otpWithDashes}.
+  //  Please enter this code in our app to confirm your identity.
+  //   Do not share this code with anyone.`;
+  // const response = await sendSMS(recipient, message);
+  // return response;
 };
 
 module.exports = { sendOTP };

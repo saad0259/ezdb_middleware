@@ -6,7 +6,7 @@ const Excel = require("exceljs");
 const pool = require("../db/connection");
 
 const recordsTable = "table_1";
-const searchesTable = "searches";
+const searchesTable = "ezdb_searches";
 
 const getRecords = async (req, res) => {
   try {
@@ -30,6 +30,7 @@ const getRecords = async (req, res) => {
       searchValue,
       postcode
     );
+
     let countStatement = _getCountQuery(searchType, searchValue, postcode);
     const result = await request.query(queryStatement);
     const countResult = await request.query(countStatement);
