@@ -11,8 +11,16 @@ const {
   notifyUser,
   getMembershipLogs,
   deleteUser,
+  addUserToAllowedList,
+  deleteAllowedUser,
+  getAllowedUsers,
 } = require("../controllers/users");
 
+router
+  .route("/allowed/:phone")
+  .post(addUserToAllowedList)
+  .delete(deleteAllowedUser);
+router.route("/allowed").get(getAllowedUsers);
 router.route("/:userId/membershipLogs").get(getMembershipLogs);
 router.route("/searches").get(getAllSearches);
 router.route("/:userId/searches").get(getUserSearches);

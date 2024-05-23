@@ -8,6 +8,7 @@ const pool = require("../db/connection");
 
 const usersTable = "ezdb_users";
 const searchesTable = "ezdb_searches";
+const allowedUsersTable = "ezdb_allowed_users";
 const membershipLogsTable = "ezdb_user_membership_logs";
 
 const getUsers = async (req, res) => {
@@ -197,6 +198,60 @@ const getMembershipLogs = async (req, res) => {
   return;
 };
 
+const addUserToAllowedList = async (req, res) => {
+  const poolResult = await pool;
+  const request = poolResult.request();
+
+  const { phone } = req.params;
+
+  if (!phone) {
+    throw new BadRequestError("Please provide phone");
+  }
+
+  //check duplication
+  const result = await request.query(
+    `SELECT * FROM ${allowedUsersTable} WHERE phone = '${phone}'`
+  );
+
+  if (result.recordset.length > 0) {
+    throw new BadRequestError("User already exists in allowed list");
+  }
+
+  await request.query(
+    `INSERT INTO ${allowedUsersTable} (phone) VALUES ('${phone}')`
+  );
+
+  res
+    .status(StatusCodes.OK)
+    .json({ message: "New User added to allowed list" });
+};
+
+const getAllowedUsers = async (req, res) => {
+  const poolResult = await pool;
+  const request = poolResult.request();
+
+  const result = await request.query(`SELECT * FROM ${allowedUsersTable}`);
+
+  return res.status(StatusCodes.OK).json(result.recordset);
+};
+
+const deleteAllowedUser = async (req, res) => {
+  const poolResult = await pool;
+  const request = poolResult.request();
+
+  const { phone } = req.params;
+  if (!phone) {
+    throw new BadRequestError("Please provide phone");
+  }
+
+  await request.query(
+    `DELETE FROM ${allowedUsersTable} WHERE phone = '${phone}'`
+  );
+
+  res
+    .status(StatusCodes.OK)
+    .json({ message: "User deleted from allowed list" });
+};
 module.exports = {
   getUsers,
   getUserById,
@@ -207,6 +262,9 @@ module.exports = {
   notifyUser,
   getMembershipLogs,
   deleteUser,
+  getAllowedUsers,
+  addUserToAllowedList,
+  deleteAllowedUser,
 };
 
 const decodeToken = async (req, res) => {
