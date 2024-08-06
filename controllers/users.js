@@ -139,14 +139,15 @@ const deleteUser = async (req, res) => {
   res.status(StatusCodes.OK).json({ message: "User deleted" });
 };
 
-const notifyUser = async (req, res, respond = true) => {
-  const { title, body, token } = req.body;
+const notifyEveryone = async (req, res) => {
+  //send notification on topic allusers
   const { admin } = req;
 
-  if (!title || !body || !token) {
-    throw new BadRequestError("Please provide title, body and token");
-  }
+  const { title, body } = req.body;
 
+  if (!title || !body) {
+    throw new BadRequestError("Please provide all values");
+  }
   const payload = {
     notification: {
       title,
@@ -154,14 +155,75 @@ const notifyUser = async (req, res, respond = true) => {
     },
   };
 
-  const response = await admin.messaging().sendToDevice(token, payload);
+  const topic = "allusers";
 
+  await admin
+    .messaging()
+    .sendToTopic(topic, payload)
+    .then(function (response) {
+      // console.log("Successfully sent message:", response);
+    })
+    .catch(function (error) {
+      console.log("Error sending message:", error);
+    });
+
+  res.status(StatusCodes.OK).json({ msg: "Notification sent" });
+};
+const notifyUser = async (req, res, respond = true) => {
+  //send notification on topic userId
+  const { admin } = req;
+  const { title, body } = req.body;
+  const { userId } = req.params;
+
+  const payload = {
+    notification: {
+      title,
+      body,
+    },
+  };
+  const topic = userId;
+  await admin
+    .messaging()
+    .sendToTopic(topic, payload)
+    .then(function (response) {
+      console.log("Successfully sent message:", response);
+    })
+    .catch(function (error) {
+      console.log("Error sending message:", error);
+    });
   if (respond) {
-    res.status(StatusCodes.OK).json(response);
+    res.status(StatusCodes.OK).json({ msg: "Notification sent" });
   } else {
-    return response;
+    return;
   }
 };
+
+// const notifyUser = async (req, res, respond = true) => {
+//   const { title, body, token } = req.body;
+//   const { admin } = req;
+
+//   if (!title || !body || !token) {
+//     throw new BadRequestError("Please provide title, body and token");
+//   }
+
+//   const payload = {
+//     notification: {
+//       title,
+//       body,
+//     },
+//   };
+
+//   console.log("payload", payload);
+//   console.log("token", token);
+
+//   const response = await admin.messaging().sendToDevice(token, payload);
+
+//   if (respond) {
+//     res.status(StatusCodes.OK).json(response);
+//   } else {
+//     return response;
+//   }
+// };
 
 const _addMembershipLog = async (req, res) => {
   const { userId } = req.params;
@@ -260,6 +322,7 @@ module.exports = {
   getAllSearches,
   updateFcmToken,
   notifyUser,
+  notifyEveryone,
   getMembershipLogs,
   deleteUser,
   getAllowedUsers,
