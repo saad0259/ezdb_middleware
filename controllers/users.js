@@ -181,7 +181,8 @@ const notifyUser = async (req, res, respond = true) => {
       body,
     },
   };
-  const topic = userId;
+  const topic = userId.toString();
+
   await admin
     .messaging()
     .sendToTopic(topic, payload)

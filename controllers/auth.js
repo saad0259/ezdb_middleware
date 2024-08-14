@@ -231,11 +231,12 @@ const login = async (req, res) => {
         body: {
           title: "Forced Logout",
           body: "Another device logged in to this account",
-          token: user.recordset[0].fcmToken,
+          userId: user.recordset[0].id,
         },
+        params: { userId: user.recordset[0].id },
         admin,
       };
-      await notifyUser(reqData, false);
+      await notifyUser(reqData, null, false);
     } catch (error) {
       console.log("error is", error);
     }
