@@ -241,7 +241,7 @@ const login = async (req, res) => {
       console.log("error is", error);
     }
     //send logout notification
-    console.log("new phone");
+    // console.log("new phone");
   }
 
   //add fcmToken and token to user
@@ -464,17 +464,17 @@ async function _preventDuplicateUser(request, userPhone) {
        ORDER BY createdAt DESC`);
 
     if (otp.recordset.length === 0) {
-      console.log("no old otp");
+      // console.log("no old otp");
     } else {
       _checkOtpDelay(otp);
-      console.log("old otp : ", otp.recordset[0].otp ?? "");
+      // console.log("old otp : ", otp.recordset[0].otp ?? "");
 
       //get otpCounter from otp
       otpCounter = otp.recordset[0].otpCount ?? 0;
       otpCounter = otpCounter + 1;
 
-      console.log("old otpCounter : ", otp.recordset[0].otpCount ?? 0);
-      console.log("otpCounter : ", otpCounter);
+      // console.log("old otpCounter : ", otp.recordset[0].otpCount ?? 0);
+      // console.log("otpCounter : ", otpCounter);
     }
 
     //delete old otp
