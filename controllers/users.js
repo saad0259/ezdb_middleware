@@ -199,33 +199,6 @@ const notifyUser = async (req, res, respond = true) => {
   }
 };
 
-// const notifyUser = async (req, res, respond = true) => {
-//   const { title, body, token } = req.body;
-//   const { admin } = req;
-
-//   if (!title || !body || !token) {
-//     throw new BadRequestError("Please provide title, body and token");
-//   }
-
-//   const payload = {
-//     notification: {
-//       title,
-//       body,
-//     },
-//   };
-
-//   console.log("payload", payload);
-//   console.log("token", token);
-
-//   const response = await admin.messaging().sendToDevice(token, payload);
-
-//   if (respond) {
-//     res.status(StatusCodes.OK).json(response);
-//   } else {
-//     return response;
-//   }
-// };
-
 const _addMembershipLog = async (req, res) => {
   const { userId } = req.params;
   const { membershipExpiry } = req.body;

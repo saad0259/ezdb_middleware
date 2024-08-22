@@ -1,6 +1,7 @@
 const { StatusCodes } = require("http-status-codes");
 const { BadRequestError, NotFoundError } = require("../errors");
 const crypto = require("crypto");
+const axios = require("axios");
 
 const pool = require("../db/connection");
 
@@ -12,11 +13,11 @@ const {
 } = require("../assets/html_templates/payment_fail_screen");
 
 const paymentsTable = "ezdb_payments";
+6;
 const usersTable = "ezdb_users";
 
 const createPaymentIntent = async (req, res) => {
   const { offer, userId, status, createdAt } = req.body;
-  const { stripe } = req;
 
   if (!offer || !userId || !status || !createdAt) {
     throw new BadRequestError("Please provide all values");
@@ -61,20 +62,13 @@ const createPaymentIntent = async (req, res) => {
       message: "Free Trial Successfully Created",
     });
   } else {
-    const session = await createPaymentSession(
-      currentUrl,
-      id,
-      stripe,
-      offer,
-      request
-    );
+    const session = await createPaymentSession(currentUrl, id, offer, request);
     return res.json({ url: session.url });
   }
 };
 
 const completePaymentIntent = async (req, res) => {
   const { id: paymentId } = req.params;
-  const { stripe } = req;
 
   try {
     if (!paymentId) {
@@ -99,9 +93,21 @@ const completePaymentIntent = async (req, res) => {
         .send(paymentSuccessTemplate(paymentId, payment.offerPrice, date));
     }
 
-    const session = await stripe.checkout.sessions.retrieve(payment.sessionId);
+    const secret = Buffer.from(`${process.env.BILLPLZ_SECRET}:`).toString(
+      "base64"
+    );
 
-    if (session.payment_status === "paid") {
+    const response = await axios.get(
+      `${process.env.BILLPLZ_URL}/v3/bills/${payment.sessionId}`,
+      {
+        headers: {
+          Authorization: `Basic ${secret}`,
+        },
+      }
+    );
+    const session = response.data;
+
+    if (session.state === "paid") {
       var date = await _successfulPayment(poolResult, paymentId, res, payment);
     } else {
       await _failedPayment(poolResult, paymentId);
@@ -134,26 +140,34 @@ module.exports = {
   completePaymentIntent,
   getPaymentsByUserId,
 };
-async function createPaymentSession(currentUrl, id, stripe, offer, request) {
+async function createPaymentSession(currentUrl, id, offer, request) {
   const webhookUrl = `${currentUrl}/api/v1/payments/${id}`;
 
-  const session = await stripe.checkout.sessions.create({
-    line_items: [
-      {
-        price_data: {
-          currency: "myr",
-          unit_amount: offer.price * 100,
-          product_data: {
-            name: offer.name,
-          },
-        },
-        quantity: 1,
-      },
-    ],
-    mode: "payment",
-    success_url: webhookUrl,
-    cancel_url: webhookUrl,
+  const url = `${process.env.BILLPLZ_URL}/v3/bills`;
+  const collectionId = process.env.BILLPLZ_COLLECTION_ID;
+  const secret = Buffer.from(`${process.env.BILLPLZ_SECRET}:`).toString(
+    "base64"
+  );
+
+  const data = {
+    collection_id: collectionId,
+    description: offer.name,
+    name: offer.name,
+    amount: offer.price * 100,
+    callback_url: webhookUrl,
+    redirect_url: webhookUrl,
+    mobile: "+60123456789",
+    deliver: false,
+  };
+
+  const response = await axios.post(url, data, {
+    headers: {
+      Content_Type: "application/x-www-form-urlencoded",
+      Authorization: `Basic ${secret}`,
+    },
   });
+
+  const session = response.data;
 
   //update sessionId in payment table
   await request
