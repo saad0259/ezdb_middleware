@@ -17,9 +17,9 @@ const paymentsTable = "ezdb_payments";
 const usersTable = "ezdb_users";
 
 const createPaymentIntent = async (req, res) => {
-  const { offer, userId, status, createdAt } = req.body;
+  const { offer, userId, status, createdAt, phone } = req.body;
 
-  if (!offer || !userId || !status || !createdAt) {
+  if (!offer || !userId || !status || !createdAt || !phone) {
     throw new BadRequestError("Please provide all values");
   }
 
@@ -62,7 +62,13 @@ const createPaymentIntent = async (req, res) => {
       message: "Free Trial Successfully Created",
     });
   } else {
-    const session = await createPaymentSession(currentUrl, id, offer, request);
+    const session = await createPaymentSession(
+      currentUrl,
+      id,
+      offer,
+      request,
+      phone
+    );
     return res.json({ url: session.url });
   }
 };
@@ -140,7 +146,7 @@ module.exports = {
   completePaymentIntent,
   getPaymentsByUserId,
 };
-async function createPaymentSession(currentUrl, id, offer, request) {
+async function createPaymentSession(currentUrl, id, offer, request, phone) {
   const webhookUrl = `${currentUrl}/api/v1/payments/${id}`;
 
   const url = `${process.env.BILLPLZ_URL}/v3/bills`;
@@ -156,7 +162,7 @@ async function createPaymentSession(currentUrl, id, offer, request) {
     amount: offer.price * 100,
     callback_url: webhookUrl,
     redirect_url: webhookUrl,
-    mobile: "+60123456789",
+    mobile: phone,
     deliver: false,
   };
 
