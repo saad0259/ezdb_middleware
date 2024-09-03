@@ -70,4 +70,17 @@ const updateOffer = async (req, res) => {
   }
 };
 
-module.exports = { getOffers, createOffer, updateOffer };
+const deleteOffer = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const poolResult = await pool;
+    const request = poolResult.request();
+    await request.query(`DELETE FROM ${offersTable} WHERE id = ${id}`);
+    res.status(StatusCodes.OK).json({ message: "Offer deleted" });
+  } catch (error) {
+    throw new NotFoundError("Offer not found");
+  }
+};
+
+module.exports = { getOffers, createOffer, updateOffer, deleteOffer };
