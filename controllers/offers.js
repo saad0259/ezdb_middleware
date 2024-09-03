@@ -19,6 +19,30 @@ const getOffers = async (req, res) => {
   }
 };
 
+const createOffer = async (req, res) => {
+  const { name, days, price, isActive = true } = req.body;
+
+  switch (true) {
+    case !name:
+      throw new BadRequestError("Name is required");
+    case !days:
+      throw new BadRequestError("Days is required");
+    case !price:
+      throw new BadRequestError("Price is required");
+  }
+
+  try {
+    const poolResult = await pool;
+    const request = poolResult.request();
+    await request.query(
+      `INSERT INTO ${offersTable} (name, days, price, isActive) VALUES ('${name}', '${days}', '${price}', '${isActive}')`
+    );
+    res.status(StatusCodes.CREATED).json({ message: "Offer created" });
+  } catch (error) {
+    throw new BadRequestError("Something went wrong: " + error);
+  }
+};
+
 const updateOffer = async (req, res) => {
   const { name, days, price, isActive } = req.body;
   const { id } = req.params;
@@ -46,4 +70,4 @@ const updateOffer = async (req, res) => {
   }
 };
 
-module.exports = { getOffers, updateOffer };
+module.exports = { getOffers, createOffer, updateOffer };
