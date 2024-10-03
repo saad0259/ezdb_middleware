@@ -140,34 +140,31 @@ const deleteUser = async (req, res) => {
 };
 
 const notifyEveryone = async (req, res) => {
-  //send notification on topic allusers
   const { admin } = req;
-
   const { title, body } = req.body;
 
   if (!title || !body) {
     throw new BadRequestError("Please provide all values");
   }
-  const payload = {
+
+  const message = {
     notification: {
       title,
       body,
     },
+    topic: "allusers",
   };
 
-  const topic = "allusers";
-
-  await admin
-    .messaging()
-    .sendToTopic(topic, payload)
-    .then(function (response) {
-      // console.log("Successfully sent message:", response);
-    })
-    .catch(function (error) {
-      console.log("Error sending message:", error);
-    });
-
-  res.status(StatusCodes.OK).json({ msg: "Notification sent" });
+  try {
+    const response = await admin.messaging().send(message);
+    console.log("Successfully sent message:", response);
+    res.status(StatusCodes.OK).json({ msg: "Notification sent" });
+  } catch (error) {
+    console.error("Error sending message:", error);
+    res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .json({ msg: "Failed to send notification" });
+  }
 };
 const notifyUser = async (req, res, respond = true) => {
   //send notification on topic userId
@@ -175,27 +172,27 @@ const notifyUser = async (req, res, respond = true) => {
   const { title, body } = req.body;
   const { userId } = req.params;
 
-  const payload = {
+  const message = {
     notification: {
       title,
       body,
     },
+    topic: userId.toString(),
   };
-  const topic = userId.toString();
 
-  await admin
-    .messaging()
-    .sendToTopic(topic, payload)
-    .then(function (response) {
-      // console.log("Successfully sent message:", response);
-    })
-    .catch(function (error) {
-      console.log("Error sending message:", error);
-    });
-  if (respond) {
-    res.status(StatusCodes.OK).json({ msg: "Notification sent" });
-  } else {
-    return;
+  try {
+    const response = await admin.messaging().send(message);
+    // console.log("Successfully sent message:", response);
+    if (respond) {
+      res.status(StatusCodes.OK).json({ msg: "Notification sent" });
+    }
+  } catch (error) {
+    console.log("Error sending message:", error);
+    if (respond) {
+      res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json({ msg: "Failed to send notification" });
+    }
   }
 };
 
