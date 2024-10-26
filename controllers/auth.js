@@ -104,6 +104,14 @@ const verifyOtp = async (req, res) => {
     //create token
     const token = _createJWT(user);
 
+    //update authToken
+    await request
+      .input("phone2", sql.VarChar, phone)
+      .input("token", sql.VarChar, token)
+      .query(
+        `UPDATE ${usersTable} SET authToken = @token WHERE phone = @phone2`
+      );
+
     const userData = {
       id: user.recordset[0].id,
       phone: user.recordset[0].phone,
